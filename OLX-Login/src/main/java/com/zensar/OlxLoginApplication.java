@@ -41,7 +41,7 @@ public class OlxLoginApplication {
 // TODO Auto-generated method stub
 		ApiInfo apiInfo = new ApiInfo("Swagger Restful Api Documentation",
 				"This page given REST API Documentation for Stock", "2.5", "My Teams of Service",
-				new Contact("Raja", "http://raja.com", "raja@gmail.com"), "GPL", "http://gpl.org",
+				new Contact("Pavan", "http://Pavan.com", "dasarepavan007@gmail.com@gmail.com"), "GPL", "http://gpl.org",
 				new ArrayList<VendorExtension>());
 		return apiInfo;
 	}
