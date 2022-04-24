@@ -31,21 +31,22 @@ class LoginControllerTest {
 	@MockBean
 	LoginService loginService;
 
-//	@Test
-//	public void testRegisterUser() {
-//		User userlist = new User();
-//		userlist.setFirstName("pavan");
-//
-//		when(this.loginService.registerUser(userlist)).thenReturn(userlist);
-//
-//		MvcResult mvcResult = this.mockMvc.perform(post("localhost:9000/olx/login/user").contentType("application/json")
-//				.content(objectMapper.writeValueAsString(userlist)).andExpect(Status.OK)
-//				.andExpect(content().string(containsString("pavan"))).andReturn());
-//
-//		String response = mvcResult.getResponse().getContentAsString();
-//		assertEquals(response.contains("pavan"), true);
-//
-//	}
+@Test
+	public void testRegisterUser() throws JsonProcessingException, Exception {
+		User userlist = new User();
+		userlist.setFirstName("pavan");
+
+		when(this.loginService.registerUser(userlist)).thenReturn(userlist);
+
+		MvcResult mvcResult = this.mockMvc
+				.perform(post("localhost:8001/olx/login/user").contentType("application/json")
+						.content(objectMapper.writeValueAsString(userlist)).headers(null))
+				.andExpect(status().isOk()).andExpect(content().string(containsString("pavan"))).andReturn();
+
+		String response = mvcResult.getResponse().getContentAsString();
+		assertEquals(response.contains("pavan"), true);
+
+	}
 	
 	
 	
