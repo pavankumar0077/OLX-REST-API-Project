@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LoginServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">OLX-Login</a> &gt; <a href="index.source.html" class="el_package">com.zensar.service</a> &gt; <span class="el_source">LoginServiceImpl.java</span></div><h1>LoginServiceImpl.java</h1><pre class="source lang-java linenums">package com.zensar.service;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeMap;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.stereotype.Service;
+
+import com.zensar.dto.User;
+import com.zensar.entity.BlackListedTokensDocument;
+import com.zensar.entity.UserEntity;
+import com.zensar.exception.InvalidAuthTokenException;
+import com.zensar.exception.InvalidCredentialsException;
+import com.zensar.repository.UserMongoRepo;
+import com.zensar.repository.UserRepo;
+import com.zensar.security.JwtUtil;
+
+@Service
+<span class="fc" id="L27">public class LoginServiceImpl implements LoginService {</span>
+
+	@Autowired
+	UserRepo userRepo;
+
+	@Autowired
+	UserMongoRepo userMongoRepo;
+
+	@Autowired
+	ModelMapper modelMapper;
+
+	@Autowired
+	AuthenticationManager authenticationManager;
+
+	@Autowired
+	JwtUtil jwtUtil;
+
+//	@Autowired
+	UserDetails userDetails;
+
+	@Autowired
+	UserDetailsService userDetailsService;
+
+	@Override
+	public String authenticate(User user) {
+		try {
+<span class="nc" id="L53">			this.authenticationManager</span>
+<span class="nc" id="L54">					.authenticate(new UsernamePasswordAuthenticationToken(user.getUserName(), user.getPassword()));</span>
+
+		}
+
+<span class="nc" id="L58">		catch (AuthenticationException ex) {</span>
+<span class="nc" id="L59">			throw new InvalidCredentialsException(ex.toString());</span>
+<span class="nc" id="L60">		}</span>
+
+<span class="nc" id="L62">		String jwt = jwtUtil.generateToken(user.getUserName());</span>
+<span class="nc" id="L63">		return jwt;</span>
+	}
+
+//	@Override
+//	public boolean logout(String authToken) {
+//		UserDocument userDocument = userMongoRepo.findByToken(authToken);
+//		if (userDocument != null) {
+//			return false;
+//		}
+//		UserDocument newToken = new UserDocument(authToken, LocalDate.now());
+//		userDocument.save(newToken);
+//		return true;
+//
+//	}
+
+	@Override
+	public boolean logout(String authToken) {
+<span class="nc" id="L80">		String token = authToken.substring(7);</span>
+<span class="nc" id="L81">		BlackListedTokensDocument bts = userMongoRepo.findByToken(token);</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">		if (bts == null) {</span>
+<span class="nc" id="L83">			BlackListedTokensDocument newBts = new BlackListedTokensDocument(token, LocalDate.now());</span>
+<span class="nc" id="L84">			userMongoRepo.save(newBts);</span>
+<span class="nc" id="L85">			return true;</span>
+		}
+
+<span class="nc" id="L88">		throw new InvalidAuthTokenException();</span>
+
+	}
+
+	@Override
+	public User registerUser(User user) {
+<span class="nc" id="L94">		UserEntity userEntity = convertDTOIntoEntity(user);</span>
+<span class="nc" id="L95">		userEntity = userRepo.save(userEntity);</span>
+<span class="nc" id="L96">		return convertEntityIntoDTO(userEntity);</span>
+	}
+
+	// get a user
+	@Override
+	public User getUserById(int id) {
+<span class="nc" id="L102">		UserEntity uEntity = userRepo.getById(id);</span>
+<span class="nc" id="L103">		return convertEntityIntoDTO(uEntity);</span>
+
+	}
+
+	@Override
+	public boolean validateToken(String authToken) {
+		try {
+<span class="nc" id="L110">			authToken = authToken.substring(7);</span>
+<span class="nc" id="L111">			String username = jwtUtil.extractUsername(authToken);</span>
+<span class="nc" id="L112">			UserDetails userDetails = userDetailsService.loadUserByUsername(username);</span>
+<span class="nc" id="L113">			return jwtUtil.validateToken(authToken, userDetails);</span>
+<span class="nc" id="L114">		} catch (Exception e) {</span>
+<span class="nc" id="L115">			return false;</span>
+		}
+	}
+
+	private UserEntity convertDTOIntoEntity(User user) {
+<span class="nc" id="L120">		TypeMap&lt;User, UserEntity&gt; tMap = modelMapper.typeMap(User.class, UserEntity.class);</span>
+<span class="nc" id="L121">		UserEntity userEntity = modelMapper.map(user, UserEntity.class);</span>
+<span class="nc" id="L122">		return userEntity;</span>
+	}
+
+//	private List&lt;Advertise&gt; convertEntityListIntoDTOList(List&lt;AdvertiseEntity&gt; advertiseEntityList) {
+//		// return new StockEntity(stock.getId(), stock.getName(), stock.getMarket(),
+//		// stock.getPrice());
+//		List&lt;Advertise&gt; advertisesList = new ArrayList&lt;&gt;();
+//		for(AdvertiseEntity advertiseEntity : advertiseEntityList)
+//		{
+//		TypeMap&lt;AdvertiseEntity, Advertise&gt; typeMap = modelMapper.typeMap(AdvertiseEntity.class, Advertise.class);
+//		Advertise advertise = modelMapper.map(advertiseEntity, Advertise.class);
+//		advertisesList.add(advertise);
+//		}
+//
+//		return advertisesList;
+
+	private List&lt;User&gt; convertEntityListIntoDTOList(List&lt;UserEntity&gt; userEntityList) {
+<span class="nc" id="L139">		List&lt;User&gt; userList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">		for (UserEntity userEntity : userEntityList) {</span>
+<span class="nc" id="L141">			TypeMap&lt;UserEntity, User&gt; typeMap = modelMapper.typeMap(UserEntity.class, User.class);</span>
+<span class="nc" id="L142">			User user = modelMapper.map(userEntity, User.class);</span>
+<span class="nc" id="L143">			userList.add(user);</span>
+<span class="nc" id="L144">		}</span>
+<span class="nc" id="L145">		return userList;</span>
+
+	}
+
+	private List&lt;UserEntity&gt; convertDTOListIntoEntityList(List&lt;User&gt; userList) {
+<span class="nc" id="L150">		List&lt;UserEntity&gt; userEntityList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">		for (User user : userList) {</span>
+<span class="nc" id="L152">			TypeMap&lt;User, UserEntity&gt; typeMap = modelMapper.typeMap(User.class, UserEntity.class);</span>
+<span class="nc" id="L153">			UserEntity userEntity = modelMapper.map(user, UserEntity.class);</span>
+<span class="nc" id="L154">			userList.add(user);</span>
+<span class="nc" id="L155">		}</span>
+<span class="nc" id="L156">		return userEntityList;</span>
+
+	}
+
+	private User convertEntityIntoDTO(UserEntity userEntity) {
+<span class="nc" id="L161">		TypeMap&lt;UserEntity, User&gt; tMap = modelMapper.typeMap(UserEntity.class, User.class);</span>
+<span class="nc" id="L162">		User user = modelMapper.map(userEntity, User.class);</span>
+<span class="nc" id="L163">		return user;</span>
+	}
+
+//	@Override
+//	public User getUser(String authToken) {
+//		UserEntity userentity = userRepo.findByFirstName(authToken);
+//		return convertEntityIntoDTO(userentity);
+//	}
+
+	@Override
+	public List&lt;User&gt; getUser(String authToken) {
+<span class="nc" id="L174">		authToken = authToken.substring(7);</span>
+<span class="nc" id="L175">		String username = jwtUtil.extractUsername(authToken);</span>
+<span class="nc" id="L176">		List&lt;UserEntity&gt; userentity = userRepo.findByUserName(username);</span>
+<span class="nc" id="L177">		return convertEntityListIntoDTOList(userentity);</span>
+	}
+
+//  @Override
+//  public User getUser() {
+//	List&lt;UserEntity&gt; userEntityList = userRepo.findAll();
+//	List&lt;User&gt; userDtoList = new ArrayList&lt;User&gt;();
+//	for (UserEntity userEntity : userEntityList) {
+//	    User user = convertEntityIntoDTO(userEntity);
+//	    userDtoList.add(user);
+//	}
+//	return getUser();
+//  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>
